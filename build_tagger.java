@@ -1,7 +1,10 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
@@ -329,6 +332,54 @@ public class build_tagger {
 	 * @param fileName
 	 */
 	private void write_model_file(String fileName){
+		File _file = new File(fileName);
+		
+		try (FileWriter _fw = new FileWriter(fileName)) {
+ 
+			/* if file doesn't exists, then create it */
+			if (!_file.exists()) {
+				_file.createNewFile();
+			}
+			
+			/*
+			 * write attributes to model file
+			 */
+			_fw.write(totalCountTagTag + "\n");
+			_fw.write(totalCountWordTag + "\n");
+			_fw.write(totalWordTypes + "\n");
+			_fw.write(totalSingletonWords + "\n");
+			for(int i=0; i<countTagTag.length; i++){
+				for(int j=0; j<countTagTag[i].length; j++){
+					_fw.write(countTagTag[i][j] +" ");
+				}
+				_fw.write("\n");
+			}
+			for(int i=0; i<sumWordTag.length; i++){
+				_fw.write(sumWordTag[i] + " ");
+			}
+			_fw.write("\n");
+			for(int i=0; i<sumTagTag.length; i++){
+				_fw.write(sumTagTag[i] + " ");
+			}
+			_fw.write("\n");
+			for(int i=0; i<seenWordTypes.length; i++){
+				_fw.write(seenWordTypes[i] + " ");
+			}
+			_fw.write("\n");
+			for(int i=0; i<seenTagTypes.length; i++){
+				_fw.write(seenTagTypes[i] + " ");
+			}
+			_fw.write("\n");
+			//TODO follow picture order to write to files. left hashmaps
+			
+			
+			
+			
+			
+			_fw.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		return;
 	}
 
@@ -434,7 +485,6 @@ public class build_tagger {
 		 */
 		build_tagger bd = new build_tagger(args[0], args[1], args[2]);
 		bd.build();
-		
 		return;
 	}
 
