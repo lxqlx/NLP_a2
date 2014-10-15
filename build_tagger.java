@@ -62,6 +62,10 @@ public class build_tagger {
 	/*emissionMatrix["word"][i] = P(word|Tag_i)*/
 	private HashMap<String, float[]> emissionMatrix;
 
+	/* count Number of words that occur only once */
+	private int totalSingletonWords;
+	/*used to count number of each word occured*/
+	private HashMap<String, Integer> countWordI;
 	/**
 	 * Constructor
 	 * @param training training file path to read
@@ -84,6 +88,8 @@ public class build_tagger {
 		modelFileName = model;
 		transitionMatrix = new float[NUM_OF_TAGS][NUM_OF_TAGS];
 		emissionMatrix = new HashMap<String, float[]>();
+		totalSingletonWords = 0;
+		countWordI = new HashMap<String, Integer>();
 		
 		/*
 		 * Initializing arrays with 0;
@@ -159,10 +165,11 @@ public class build_tagger {
 			/* Add Count(Word, Tag) */
 			String _word = "";
 			/* Concatenate word if it contains / inside*/
-			for(int j=0; j<_wordTag.length-1; j++){
+			for(int j=0; j<_wordTag.length-2; j++){
 				_word += _wordTag[j];
 				if(j != _wordTag.length-1) _word += "/";
 			}
+			_word += _wordTag[_wordTag.length-2];
 			add_word_tag(_word, _curTag);
 			
 			/*print prevTag curTag*/
@@ -210,12 +217,26 @@ public class build_tagger {
 			System.out.println("Unknown Tag " + tag_i + " !");
 			return;
 		}
+		
+		/*if word matched as numbers, convert it to #NUM#, for simplify*/
+		String _regex= "-?\\d+(.\\d+)?";
+		if(word_k.matches(_regex)){
+			word_k = "#NUM#";
+			//System.out.println("matched numeric");
+		}
+		
 		/*if word already exists, add one for tag_i*/
 		if(countWordTag.containsKey(word_k)){
 			/*Check if word types already counted for Tag_i*/
 			if(countWordTag.get(word_k)[_i] == 0){
 				seenWordTypes[_i] ++;
 			}
+			/*New inserted word increment singletons, increasing existing countWordTag will decrement singletons */
+			int _num = countWordI.get(word_k);
+			if(_num == 1){
+				totalSingletonWords--;
+			}
+			countWordI.put(word_k, _num+1);
 			
 			countWordTag.get(word_k)[_i] ++;
 		}
@@ -223,8 +244,11 @@ public class build_tagger {
 			int[] _temp = new int[NUM_OF_TAGS-1];
 			_temp[_i]++;
 			countWordTag.put(word_k, _temp);
+			countWordI.put(word_k, 1);
 			totalWordTypes ++;
 			seenWordTypes[_i]++;
+			/*New inserted word increment singletons, increasing existing countWordTag will decrement singletons */
+			totalSingletonWords++;
 		}
 		sumWordTag[_i]++;
 		totalCountWordTag++;
@@ -330,9 +354,9 @@ public class build_tagger {
 			}
 			System.out.println("equal: "+ (sum == sumTagTag[i]-countTagTag[i][countTagTag.length-1]));
 			System.out.println();
-		}
+		}*/
 		System.out.println("Word Counts: " + totalCountWordTag + " ; Word Types " + totalWordTypes);
-		
+		/*
 		for(int i=0; i<transitionMatrix.length; i++){
 			for(int j=0; j<transitionMatrix[i].length; j++){
 				System.out.printf("%.8f ",transitionMatrix[i][j]);
@@ -340,6 +364,20 @@ public class build_tagger {
 			System.out.println();
 		}
 		*/
+		
+		System.out.println("Number of singletons: "+ totalSingletonWords);
+		/*
+		Iterator _it = countWordI.entrySet().iterator();
+	    while (_it.hasNext()) {
+	        Map.Entry _pairs = (Map.Entry)_it.next();
+	        int _num = (int) _pairs.getValue();
+	        String _word = (String) _pairs.getKey();
+	        if(_num == 1){
+	        	System.out.println(_word);
+	        }
+	    }
+	    System.out.println("97.90".matches("\\d+(.\\d+)?"));
+	    */
 		
 	}
 	public static void main(String[] args) {
