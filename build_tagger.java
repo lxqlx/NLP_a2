@@ -8,22 +8,22 @@ import java.util.*;
 
 public class build_tagger {
 	/*Number of tags used in Penn Treebank + <s> */
-	private static final int NUM_OF_SYM_TAGS = 36;
-	private static final int NUM_OF_TAGS = NUM_OF_SYM_TAGS + 10;
-	private static final Map<String, Integer> TAG_INDEX;
+	private static final int NUM_OF_TAGS = 46;
+	private static final Vector<String> TAG_INDEX;
 	static{
 		String[] tag_list = 
 				{	"CC","CD","DT","EX","FW", "IN",
 					"JJ","JJR","JJS","LS","MD","NN", 
-					"NNS","NP","NPS","PDT","POS","PRP",
+					"NNS","NNP","NNPS","PDT","POS","PRP",
 					"PRP$", "RB","RBR","RBS","RP","SYM",
 					"TO","UH","VB", "VBD","VBG","VBN",
-					"VBP","VBZ","WDT","WP","WP$","WRB"};
-		Map<String, Integer> aMap = new HashMap<String, Integer>();
-		for (int i=0; i<NUM_OF_SYM_TAGS; i++){
-			aMap.put(tag_list[i], i);
+					"VBP","VBZ","WDT","WP","WP$","WRB",
+					"$","#","``","''","-LRB-","-RRB-",",",".",":"};
+		Vector aV = new Vector<String>();
+		for (int i=0; i<tag_list.length; i++){
+			aV.add(tag_list[i]);
 		}
-		TAG_INDEX = aMap;
+		TAG_INDEX = aV;
 	}
 	
 	/*This is to store the number of "Tag_i Tag_j"
@@ -42,10 +42,14 @@ public class build_tagger {
 	 * sumTagTag[i][0] = C(Tag_i Tag_1) + ... + C(Tag_i Tag_j)
 	 */
 	private int[] sumTagTag;
+	/*Seen types of words for each Tag_i */
+	private int[] seenWordTypes;
 	/*Total number of all types of "Tag_i Tag_j" */
 	private int totalCountTagTag;
 	/*Total number of all types of "Word/Tag_i" */
 	private int totalCountWordTag;
+	/*Total types of vacabulary, which is V*/
+	private int totalWordTypes;
 	/*Training, Development, Model File names*/
 	private String trainingFileName, developmentFileName, modelFileName;
 
@@ -61,8 +65,10 @@ public class build_tagger {
 		countWordTag = new HashMap<String, int[]>();
 		sumWordTag = new int[NUM_OF_TAGS];
 		sumTagTag = new int[NUM_OF_TAGS];
+		seenWordTypes = new int[NUM_OF_TAGS-1];
 		totalCountTagTag = 0;
 		totalCountWordTag = 0;
+		totalWordTypes = 0;
 		trainingFileName = training;
 		developmentFileName = development;
 		modelFileName = model;
@@ -134,16 +140,22 @@ public class build_tagger {
 		String[] _tokens  = line.split(_whiteSpace);
 		for(int i=0; i<_tokens.length; i++){
 			/* Assume the format only contain one slash "/". */
-			String[] _wordTag = _tokens[i].split(_slash,2); 
+			String[] _wordTag = _tokens[i].split(_slash); 
 			/* Add Count(PreviousTag, CurrentTag)*/
-			add_tag_tag(_prevTag, _wordTag[1]);
+			String _curTag = _wordTag[_wordTag.length-1];
+			add_tag_tag(_prevTag, _curTag);
 			/* Add Count(Word, Tag) */
-			add_word_tag(_wordTag[0], _wordTag[1]);
+			String _word = "";
+			/* Concatenate word if it contains / inside*/
+			for(int j=0; j<_wordTag.length-1; j++){
+				_word += _wordTag[j];
+				if(j != _wordTag.length-1) _word += "/";
+			}
+			add_word_tag(_word, _curTag);
 			
 			/*print prevTag curTag*/
 			//System.out.println(_prevTag + "|" + _wordTag[1]);
-			
-			_prevTag = _wordTag[1];		
+			_prevTag = _curTag;		
 		}
 		/* When reach the end of line, add count(Tag, </s>)*/
 		add_tag_tag(_prevTag, "</s>");
@@ -162,14 +174,45 @@ public class build_tagger {
 	 * @param tag_j
 	 */
 	private void add_tag_tag(String tag_i, String tag_j){
-		
+		int _i = get_tag_index(tag_i);
+		int _j = get_tag_index(tag_j);
+		/* If tag_i or tag_j doesn't exist, throw exception*/
+		if( _i != -1 && _j != -1){
+			countTagTag[_i][_j]++;
+			sumTagTag[_i]++;
+			totalCountTagTag++;
+		}
 		return;
 	}
 	/**
 	 * Add one to C(Word_k Tag_i)
-	 * @param args
+	 * @param word_k
+	 * @param tag_i
 	 */
 	private void add_word_tag(String word_k, String tag_i){
+		int _i = get_tag_index(tag_i);
+		if(_i == -1){
+			System.out.println("Unknown Tag " + tag_i + " !");
+			return;
+		}
+		/*if word already exists, add one for tag_i*/
+		if(countWordTag.containsKey(word_k)){
+			/*Check if word types already counted for Tag_i*/
+			if(countWordTag.get(word_k)[_i] == 0){
+				seenWordTypes[_i] ++;
+			}
+			
+			countWordTag.get(word_k)[_i] ++;
+		}
+		else{
+			int[] _temp = new int[NUM_OF_TAGS-1];
+			_temp[_i]++;
+			countWordTag.put(word_k, _temp);
+			totalWordTypes ++;
+			seenWordTypes[_i]++;
+		}
+		sumWordTag[_i]++;
+		totalCountWordTag++;
 		return;
 	}
 	/** Return the index of certain Tag String
@@ -178,23 +221,15 @@ public class build_tagger {
 	 * @return	Tag index in arrays. return -1 if not exists.
 	 */
 	private int get_tag_index(String tag_i){
-		if(tag_i == "<s>" || tag_i == "</s>") return NUM_OF_TAGS-1;
-		if(tag_i == ":") return NUM_OF_TAGS-2;
-		if(tag_i == ".") return NUM_OF_TAGS-3;
-		if(tag_i == ",") return NUM_OF_TAGS-4;
-		if(tag_i == "-RRB-") return NUM_OF_TAGS-5;
-		if(tag_i == "-LRB-") return NUM_OF_TAGS-6;
-		if(tag_i == "''") return NUM_OF_TAGS-7;
-		if(tag_i == "``") return NUM_OF_TAGS-8;
-		if(tag_i == "#") return NUM_OF_TAGS-9;
-		if(tag_i == "$") return NUM_OF_TAGS-10;
+		if(tag_i.equals("<s>") || tag_i.equals("</s>")) return NUM_OF_TAGS-1;
 		
-		if(!TAG_INDEX.containsKey(tag_i)){
+		/*If tag_i not exists return -1*/
+		if(!TAG_INDEX.contains(tag_i)){
 			System.out.println("Unkown Tag " + tag_i + " !");
 			return -1;
 		}
 		
-		return TAG_INDEX.get(tag_i);
+		return TAG_INDEX.indexOf(tag_i);
 	}
 	/**
 	 * Based on the gathered information
@@ -219,6 +254,23 @@ public class build_tagger {
 		read_training_file(trainingFileName);
 		read_development_file(developmentFileName);
 		write_model_file(modelFileName);
+		/*test
+		System.out.println("V = " + totalWordTypes);
+		for(int i=0; i<seenWordTypes.length; i++){
+			System.out.println("T["+i+"] = " + TAG_INDEX.get(i) + " : " + seenWordTypes[i]);
+		}
+		 
+		for(int i=0; i<countTagTag.length-1; i++){
+			int sum = 0;
+			for(int j=0; j<countTagTag[i].length-1; j++){
+				System.out.print(TAG_INDEX.get(i) + " : " + TAG_INDEX.get(j) + " = " + countTagTag[i][j]+ " | ");
+				sum += countTagTag[i][j];
+			}
+			System.out.println("equal: "+ (sum == sumTagTag[i]-countTagTag[i][countTagTag.length-1]));
+			System.out.println();
+		}
+		System.out.println("Word Counts: " + totalCountWordTag + " ; Word Types " + totalWordTypes);
+		*/
 	}
 	public static void main(String[] args) {
 		
@@ -227,9 +279,9 @@ public class build_tagger {
 		 * 
 		 */
 		/*
-		String _str = "Yesterday/NN ,/, in/IN composite/JJ trading/NN on/IN the/DT American/NNP Stock/NNP Exchange/NNP ,/, Vermont/NNP American/NNP common/NN closed/VBD at/IN $/$ 39.75/CD ,/, off/RB 25/CD cents/NNS ./.";
+		String _str = "The/DT Merc/NNP alleged/VBD that/IN ,/, among/IN other/JJ things/NNS ,/, from/IN April/NNP 1987/CD through/IN October/NNP 1988/CD Capcom/NNP Futures/NNPS failed/VBD to/TO document/VB trades/NNS between/IN Capcom/NNP Futures/NNPS and/CC people/NNS or/CC entities/NNS directly/RB or/CC indirectly/RB controlled/JJ by/IN Capcom/NNP Futures/NNPS shareholders/NNS ./.";
 		String _delimeter = "\\s+";
-		String[] test = _str.split(_delimeter, 3);
+		String[] test = _str.split(_delimeter);
 		for(int i=0; i<test.length; i++){
 			System.out.print("\n" + test[i]);
 			String[] test_part = test[i].split("/");
@@ -237,8 +289,8 @@ public class build_tagger {
 				System.out.print(" " + test_part[j]);
 			}
 		}
-		
 		*/
+		
 		
 		/***
 		 * Try End.
