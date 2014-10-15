@@ -8,7 +8,23 @@ import java.util.*;
 
 public class build_tagger {
 	/*Number of tags used in Penn Treebank + <s> */
-	private static final int NUM_OF_TAGS = 46;
+	private static final int NUM_OF_SYM_TAGS = 36;
+	private static final int NUM_OF_TAGS = NUM_OF_SYM_TAGS + 10;
+	private static final Map<String, Integer> TAG_INDEX;
+	static{
+		String[] tag_list = 
+				{	"CC","CD","DT","EX","FW", "IN",
+					"JJ","JJR","JJS","LS","MD","NN", 
+					"NNS","NP","NPS","PDT","POS","PRP",
+					"PRP$", "RB","RBR","RBS","RP","SYM",
+					"TO","UH","VB", "VBD","VBG","VBN",
+					"VBP","VBZ","WDT","WP","WP$","WRB"};
+		Map<String, Integer> aMap = new HashMap<String, Integer>();
+		for (int i=0; i<NUM_OF_SYM_TAGS; i++){
+			aMap.put(tag_list[i], i);
+		}
+		TAG_INDEX = aMap;
+	}
 	
 	/*This is to store the number of "Tag_i Tag_j"
 	 * Where countTagTag[i][j] = C(Tag_i Tag_j) including "<s>" and "</s>"
@@ -34,18 +50,11 @@ public class build_tagger {
 	private String trainingFileName, developmentFileName, modelFileName;
 
 	/**
-	 * Enumeration of 36 Penn Treebank without punctuation.
-	 *
+	 * Constructor
+	 * @param training training file path to read
+	 * @param development development file path to read
+	 * @param model model file path to write
 	 */
-	public enum tag{
-		CC, CD, DT, EX, FW, IN, JJ, 
-		JJR, JJS, LS, MD, NN, NNS, 
-		NP, NPS, PDT, POS, PRP, PRP$, 
-		RB, RBR, RBS, RP, SYM, TO, 
-		UH, VB, VBD, VBG, VBN, VBP, 
-		VBZ, WDT, WP, WP$, WRB
-	}
-	
 	public build_tagger(String training, String development, String model){
 		
 		countTagTag = new int[NUM_OF_TAGS][NUM_OF_TAGS];
@@ -61,9 +70,9 @@ public class build_tagger {
 		/*
 		 * Initializing arrays with 0;
 		 */
-		Arrays.fill(sumTagTag, 0);
-		Arrays.fill(sumWordTag, 0);
-		Arrays.fill(countTagTag, 0);
+		//Arrays.fill(sumTagTag, 0);
+		//Arrays.fill(sumWordTag, 0);
+		//Arrays.fill(countTagTag, 0);
 		/*
 		for(int i=0; i<NUM_OF_TAGS; i++){
 			sumTagTag[i]=0;
@@ -118,6 +127,26 @@ public class build_tagger {
 	 * @param line
 	 */
 	private void process_training_sentence(String line){
+		/* Delimiters used to split sentences to Word/Tag*/
+		String _whiteSpace = "\\s+";
+		String _slash = "/";
+		String _prevTag = "<s>";
+		String[] _tokens  = line.split(_whiteSpace);
+		for(int i=0; i<_tokens.length; i++){
+			/* Assume the format only contain one slash "/". */
+			String[] _wordTag = _tokens[i].split(_slash,2); 
+			/* Add Count(PreviousTag, CurrentTag)*/
+			add_tag_tag(_prevTag, _wordTag[1]);
+			/* Add Count(Word, Tag) */
+			add_word_tag(_wordTag[0], _wordTag[1]);
+			
+			/*print prevTag curTag*/
+			//System.out.println(_prevTag + "|" + _wordTag[1]);
+			
+			_prevTag = _wordTag[1];		
+		}
+		/* When reach the end of line, add count(Tag, </s>)*/
+		add_tag_tag(_prevTag, "</s>");
 		return;
 	}
 	/**
@@ -133,6 +162,7 @@ public class build_tagger {
 	 * @param tag_j
 	 */
 	private void add_tag_tag(String tag_i, String tag_j){
+		
 		return;
 	}
 	/**
@@ -141,6 +171,30 @@ public class build_tagger {
 	 */
 	private void add_word_tag(String word_k, String tag_i){
 		return;
+	}
+	/** Return the index of certain Tag String
+	 * 
+	 * @param tag_i	Tag String
+	 * @return	Tag index in arrays. return -1 if not exists.
+	 */
+	private int get_tag_index(String tag_i){
+		if(tag_i == "<s>" || tag_i == "</s>") return NUM_OF_TAGS-1;
+		if(tag_i == ":") return NUM_OF_TAGS-2;
+		if(tag_i == ".") return NUM_OF_TAGS-3;
+		if(tag_i == ",") return NUM_OF_TAGS-4;
+		if(tag_i == "-RRB-") return NUM_OF_TAGS-5;
+		if(tag_i == "-LRB-") return NUM_OF_TAGS-6;
+		if(tag_i == "''") return NUM_OF_TAGS-7;
+		if(tag_i == "``") return NUM_OF_TAGS-8;
+		if(tag_i == "#") return NUM_OF_TAGS-9;
+		if(tag_i == "$") return NUM_OF_TAGS-10;
+		
+		if(!TAG_INDEX.containsKey(tag_i)){
+			System.out.println("Unkown Tag " + tag_i + " !");
+			return -1;
+		}
+		
+		return TAG_INDEX.get(tag_i);
 	}
 	/**
 	 * Based on the gathered information
@@ -168,6 +222,28 @@ public class build_tagger {
 	}
 	public static void main(String[] args) {
 		
+		/**
+		 * Try
+		 * 
+		 */
+		/*
+		String _str = "Yesterday/NN ,/, in/IN composite/JJ trading/NN on/IN the/DT American/NNP Stock/NNP Exchange/NNP ,/, Vermont/NNP American/NNP common/NN closed/VBD at/IN $/$ 39.75/CD ,/, off/RB 25/CD cents/NNS ./.";
+		String _delimeter = "\\s+";
+		String[] test = _str.split(_delimeter, 3);
+		for(int i=0; i<test.length; i++){
+			System.out.print("\n" + test[i]);
+			String[] test_part = test[i].split("/");
+			for (int j=0; j< test_part.length; j++){
+				System.out.print(" " + test_part[j]);
+			}
+		}
+		
+		*/
+		
+		/***
+		 * Try End.
+		 */
+		
 		/*
 		 * Check arguments number.
 		 */
@@ -182,14 +258,14 @@ public class build_tagger {
 		/*
 		 * Check if training file exists.
 		 */
-		if(!trainingFile.exists() || !trainingFile.isDirectory()){
+		if(!trainingFile.exists() || trainingFile.isDirectory()){
 			System.out.println("Trainning File \"" + args[0] + "\" doesn't exists");
 			return;
 		}
 		/*
 		 * Check if development file exists.
 		 */
-		if(!developmentFile.exists() || !developmentFile.isDirectory()){
+		if(!developmentFile.exists() || developmentFile.isDirectory()){
 			System.out.println("Trainning File \"" + args[1] + "\" doesn't exists");
 			return;
 		}
