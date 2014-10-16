@@ -69,6 +69,8 @@ public class build_tagger {
 	private int totalSingletonWords;
 	/*used to count number of each word occured*/
 	private HashMap<String, Integer> countWordI;
+	/*count singletons for each tag*/
+	private int[] countSingletonTag;
 	/**
 	 * Constructor
 	 * @param training training file path to read
@@ -93,6 +95,7 @@ public class build_tagger {
 		emissionMatrix = new HashMap<String, float[]>();
 		totalSingletonWords = 0;
 		countWordI = new HashMap<String, Integer>();
+		countSingletonTag = new int[NUM_OF_TAGS-1];
 		
 		/*
 		 * Initializing arrays with 0;
@@ -240,6 +243,7 @@ public class build_tagger {
 			int _num = countWordI.get(word_k);
 			if(_num == 1){
 				totalSingletonWords--;
+				countSingletonTag[_i]--;
 			}
 			countWordI.put(word_k, _num+1);
 			
@@ -254,6 +258,7 @@ public class build_tagger {
 			seenWordTypes[_i]++;
 			/*New inserted word increment singletons, increasing existing countWordTag will decrement singletons */
 			totalSingletonWords++;
+			countSingletonTag[_i]++;
 		}
 		sumWordTag[_i]++;
 		totalCountWordTag++;
@@ -370,6 +375,10 @@ public class build_tagger {
 			_fw.write("\n");
 			for(int i=0; i<seenTagTypes.length; i++){
 				_fw.write(seenTagTypes[i] + " ");
+			}
+			_fw.write("\n");
+			for(int i=0; i<countSingletonTag.length; i++){
+				_fw.write(countSingletonTag[i] + " ");
 			}
 			_fw.write("\n");
 			

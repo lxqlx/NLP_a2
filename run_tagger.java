@@ -28,7 +28,7 @@ public class run_tagger {
 		TAG_INDEX = aV;
 	}
 	/*Indicate Witten-Bell smoothing or One Count Smoothing*/
-	int smoothingFlag = 0;
+	int smoothingFlag = 1;
 	/*This is to store the number of "Tag_i Tag_j"
 	 * Where countTagTag[i][j] = C(Tag_i Tag_j) including "<s>" and "</s>"
 	 */
@@ -69,6 +69,8 @@ public class run_tagger {
 	private int totalSingletonWords;
 	/*used to count number of each word occured*/
 	private HashMap<String, Integer> countWordI;
+	/*count singletons for each tag*/
+	private int[] countSingletonTag;
 	/**
 	 * Constructor
 	 * @param training training file path to read
@@ -93,6 +95,7 @@ public class run_tagger {
 		emissionMatrix = new HashMap<String, double[]>();
 		totalSingletonWords = 0;
 		countWordI = new HashMap<String, Integer>();
+		countSingletonTag = new int[NUM_OF_TAGS-1];
 		
 	}
 	/**
@@ -126,6 +129,9 @@ public class run_tagger {
 
 			_line = _br.readLine();
 			parse_store_array(_line, seenTagTypes);
+
+			_line = _br.readLine();
+			parse_store_array(_line, countSingletonTag);
 			
 			while((_line = _br.readLine()) != null){
 				String _word = _line;
@@ -256,7 +262,7 @@ public class run_tagger {
 		double _result = 0.0d;
 		double _cW;
 		double _cWT;
-		if(countWordI.containsKey(word_i)){
+		if(!countWordI.containsKey(word_i)){
 			_cW = 0.0d;
 			_cWT = 0.0d;
 		}
@@ -267,7 +273,7 @@ public class run_tagger {
 		/* Back-off probability*/
 		double _backOffProb = (_cW + 1.0d) /(totalCountWordTag + totalWordTypes);
 		/* Number of Singletons*/
-		double _lambda = (double) totalSingletonWords;
+		double _lambda = (double) countSingletonTag[_i];
 		/* In case that no singletons*/
 		if(_lambda == 0.0d){
 			_lambda = 1E-100;
