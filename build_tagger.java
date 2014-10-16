@@ -370,8 +370,22 @@ public class build_tagger {
 				_fw.write(seenTagTypes[i] + " ");
 			}
 			_fw.write("\n");
-			//TODO follow picture order to write to files. left hashmaps
 			
+			Iterator _it = countWordTag.entrySet().iterator();
+		    while (_it.hasNext()) {
+		        Map.Entry _pairs = (Map.Entry)_it.next();
+		        int[] _tags = (int[]) _pairs.getValue();
+		        String _word = (String) _pairs.getKey();
+
+		        _fw.write(_word+"\n");
+		        _fw.write(countWordI.get(_word) + "\n");
+		        for(int i=0; i<_tags.length; i++){
+		        	_fw.write(_tags[i]+ " ");
+		        }
+		        _fw.write("\n");
+		    }
+		    /* avoids a ConcurrentModificationException */
+	        _it.remove();
 			
 			
 			
@@ -427,6 +441,7 @@ public class build_tagger {
 	        	System.out.println(_word);
 	        }
 	    }
+	    _it.remove();
 	    System.out.println("97.90".matches("\\d+(.\\d+)?"));
 	    */
 		
