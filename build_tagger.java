@@ -222,8 +222,10 @@ public class build_tagger {
 		}
 		
 		/*if word matched as numbers, convert it to #NUM#, for simplify*/
-		String _regex= "-?\\d+(.\\d+)?";
+		String _regex= "-?\\d+(\\.\\d+)?";
 		if(word_k.matches(_regex)){
+			//if(!tag_i.equals("CD"))
+			//System.out.println(word_k + " : " + tag_i);
 			word_k = "#NUM#";
 			//System.out.println("matched numeric");
 		}
@@ -387,9 +389,6 @@ public class build_tagger {
 		    /* avoids a ConcurrentModificationException */
 	        _it.remove();
 			
-			
-			
-			
 			_fw.close();
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -492,7 +491,7 @@ public class build_tagger {
 		 * Check if development file exists.
 		 */
 		if(!developmentFile.exists() || developmentFile.isDirectory()){
-			System.out.println("Trainning File \"" + args[1] + "\" doesn't exists");
+			System.out.println("Development File \"" + args[1] + "\" doesn't exists");
 			return;
 		}
 		/*
