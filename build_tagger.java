@@ -367,7 +367,7 @@ public class build_tagger {
 			System.out.println("equal: "+ (sum == sumTagTag[i]-countTagTag[i][countTagTag.length-1]));
 			System.out.println();
 		}*/
-		System.out.println("Word Counts: " + totalCountWordTag + " ; Word Types " + totalWordTypes);
+		//System.out.println("Word Counts: " + totalCountWordTag + " ; Word Types " + totalWordTypes);
 		/*
 		for(int i=0; i<transitionMatrix.length; i++){
 			for(int j=0; j<transitionMatrix[i].length; j++){
@@ -377,7 +377,7 @@ public class build_tagger {
 		}
 		*/
 		
-		System.out.println("Number of singletons: "+ totalSingletonWords);
+		//System.out.println("Number of singletons: "+ totalSingletonWords);
 		/*
 		Iterator _it = countWordI.entrySet().iterator();
 	    while (_it.hasNext()) {

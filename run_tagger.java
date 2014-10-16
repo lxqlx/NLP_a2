@@ -28,7 +28,7 @@ public class run_tagger {
 		TAG_INDEX = aV;
 	}
 	/*Indicate Witten-Bell smoothing : 0, Add-One smoothing: 1 or One Count Smoothing: others*/
-	int smoothingFlag = 3;
+	int smoothingFlag = 2;
 	/*This is to store the number of "Tag_i Tag_j"
 	 * Where countTagTag[i][j] = C(Tag_i Tag_j) including "<s>" and "</s>"
 	 */
@@ -349,7 +349,7 @@ public class run_tagger {
 		for(int i=0; i<prevStatesProb.length-1; i++){
 			_cur = prevStatesProb[i] * get_aij(i, curState);
 			if(_cur < 0.0d){
-				System.out.println("Probability overflow!");
+				//System.out.println("Probability overflow!");
 				double _log = Math.log(prevStatesProb[i]) + Math.log(get_aij(i, curState));
 				_cur = Math.exp(_log);
 			}
@@ -428,17 +428,20 @@ public class run_tagger {
 			if (!_file.exists()) {
 				_file.createNewFile();
 			}
-			
+			int _count = 0;
 			while((_line = _br.readLine()) != null){
+				_count ++;
 				String[] _words = _line.split("\\s+");
 				int[] _tags = vertibi(_words);
 				//System.out.println("words length: "+ _words[_words.length-1] + " tags length: " + _tags[_tags.length-1]);
 				_fw.write(_words[0]+"/"+ TAG_INDEX.get(_tags[0]));
 				for(int i=1; i<_words.length; i++){
 					_fw.write(" " + _words[i]+"/"+ TAG_INDEX.get(_tags[i]));
-					System.out.println(" " + _words[i]+"/"+ TAG_INDEX.get(_tags[i]));
+					//System.out.println(" " + _words[i]+"/"+ TAG_INDEX.get(_tags[i]));
 				}
 				_fw.write("\n");
+				System.out.print("\rTagging " + _count);
+				System.out.flush();
 			}
 			
 			_fw.close();
