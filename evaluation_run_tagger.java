@@ -9,7 +9,7 @@ import java.util.Map.Entry;
 import javax.swing.text.html.HTMLDocument.Iterator;
 
 
-public class run_tagger {
+public class evaluation_run_tagger {
 	private static final int NUM_OF_TAGS = 46;
 	private static final Vector<String> TAG_INDEX;
 	static{
@@ -28,7 +28,7 @@ public class run_tagger {
 		TAG_INDEX = aV;
 	}
 	/*Indicate Witten-Bell smoothing : 0, Add-One smoothing: 1 or One Count Smoothing: others*/
-	int smoothingFlag = 3;
+	int smoothingFlag = 0;
 	/*This is to store the number of "Tag_i Tag_j"
 	 * Where countTagTag[i][j] = C(Tag_i Tag_j) including "<s>" and "</s>"
 	 */
@@ -77,7 +77,7 @@ public class run_tagger {
 	 * @param development development file path to read
 	 * @param model model file path to write
 	 */
-	public run_tagger(String test, String model, String out){
+	public evaluation_run_tagger(String test, String model, String out){
 		
 		countTagTag = new int[NUM_OF_TAGS][NUM_OF_TAGS];
 		countWordTag = new HashMap<String, int[]>();
@@ -350,8 +350,6 @@ public class run_tagger {
 			_cur = prevStatesProb[i] * get_aij(i, curState);
 			if(_cur < 0.0d){
 				System.out.println("Probability overflow!");
-				double _log = Math.log(prevStatesProb[i]) + Math.log(get_aij(i, curState));
-				_cur = Math.exp(_log);
 			}
 			if(_cur > _max){
 				_max = _cur;
@@ -374,24 +372,13 @@ public class run_tagger {
 		/*Initialization Step*/
 		for(int j=0; j<NUM_OF_TAGS-1; j++){
 			_prevState[0][j] = get_tag_index("<s>"); // First word's prev state is <s>
-			double _log = Math.log( get_aij(get_tag_index("<s>"), j)) + Math.log(get_bwj(words[0],j));
-			_maxProb[0][j] = Math.exp(_log);
-			//_maxProb[0][j] = get_aij(get_tag_index("<s>"), j) * get_bwj(words[0], j);
+			_maxProb[0][j] = get_aij(get_tag_index("<s>"), j) * get_bwj(words[0], j);
 		}
 		/*Recursion Step*/
 		for(int t=1; t<words.length; t++){
 			for(int j=0; j<NUM_OF_TAGS-1; j++){
 				double[] _maxProbArg = max_prob_arg(_maxProb[t-1], j);
-				double _log = Math.log( _maxProbArg[0]) + Math.log(get_bwj(words[t],j));
-				_maxProb[t][j] = Math.exp(_log);
-				/*
-				_maxProb[t][j] = Math.exp(_log);
 				_maxProb[t][j] = _maxProbArg[0] * get_bwj(words[t],j);
-				if(_maxProb[t][j] < 0.0d){
-					double _log = Math.log( _maxProbArg[0]) + Math.log(get_bwj(words[t],j));
-					_maxProb[t][j] = Math.exp(_log);
-				}
-				*/
 				_prevState[t][j] = (int) _maxProbArg[1];
 			}
 		}
@@ -405,6 +392,7 @@ public class run_tagger {
 		int _current = _finalState;
 		for(int i=0; i<_tagCombinations.length; i++){
 			_current = _prevState[words.length-i][_current];
+			//System.out.println( "current is "+ _current);
 			_tagCombinations[_tagCombinations.length-1 - i] = _current;
 		}
 		/*
@@ -422,6 +410,8 @@ public class run_tagger {
 				FileWriter _fw = new FileWriter(outFileName))
 		{ // File closed automatically.
 			String _line;
+			int total = 0;
+			int correct = 0;
 			
 			File _file = new File(outFileName);
 			/* if file doesn't exists, then create it */
@@ -430,17 +420,42 @@ public class run_tagger {
 			}
 			
 			while((_line = _br.readLine()) != null){
-				String[] _words = _line.split("\\s+");
-				int[] _tags = vertibi(_words);
-				//System.out.println("words length: "+ _words[_words.length-1] + " tags length: " + _tags[_tags.length-1]);
-				_fw.write(_words[0]+"/"+ TAG_INDEX.get(_tags[0]));
-				for(int i=1; i<_words.length; i++){
-					_fw.write(" " + _words[i]+"/"+ TAG_INDEX.get(_tags[i]));
-					System.out.println(" " + _words[i]+"/"+ TAG_INDEX.get(_tags[i]));
+				String[] _wordTags = _line.split("\\s+");
+				String[] _words = new String[_wordTags.length];
+				String[] _tags = new String[_wordTags.length];
+				
+				for(int i=0; i<_wordTags.length; i++){
+					
+					String[] _wordTag = _wordTags[i].split("/"); 
+					String _curTag = _wordTag[_wordTag.length-1];
+					String _word = "";
+					for(int j=0; j<_wordTag.length-2; j++){
+						_word += _wordTag[j];
+						if(j != _wordTag.length-1) _word += "/";
+					}
+					_word += _wordTag[_wordTag.length-2];
+					
+					_words[i] = _word;
+					_tags[i] = _curTag;					
+				}
+				
+				int[] _gotTags = vertibi(_words);
+				for(int i=0; i<_tags.length; i++){
+					total++;
+					if(TAG_INDEX.indexOf(_tags[i]) == _gotTags[i]){
+						correct ++;
+					}
 				}
 				_fw.write("\n");
 			}
 			
+			System.out.println(" Total 		: " + total);
+			System.out.println(" Correct 	: " + correct);
+			System.out.println(" Accuracy 	: " + ((double) correct / (double) total));
+			_fw.append(testFileName + ": \n");
+			_fw.append(" Total 		: " + total + "\n");
+			_fw.append(" Correct 	: " + correct + "\n");
+			_fw.append(" Accuracy 	: " + ((double) correct / (double) total) + "\n");
 			_fw.close();
 			_br.close();
 		} catch (IOException e) {
@@ -514,7 +529,7 @@ public class run_tagger {
 		/*
 		 * Initialize build_tagger and start building.
 		 */
-		run_tagger bd = new run_tagger(args[0], args[1], args[2]);
+		evaluation_run_tagger bd = new evaluation_run_tagger(args[0], args[1], args[2]);
 		bd.run();
 		return;
 

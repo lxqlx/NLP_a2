@@ -59,11 +59,6 @@ public class build_tagger {
 	
 	/*Training, Development, Model File names*/
 	private String trainingFileName, developmentFileName, modelFileName;
-	
-	/*transitionMatrix[i][j] = P(Tag_j|Tag_i)*/
-	private float[][] transitionMatrix;
-	/*emissionMatrix["word"][i] = P(word|Tag_i)*/
-	private HashMap<String, float[]> emissionMatrix;
 
 	/* count Number of words that occur only once */
 	private int totalSingletonWords;
@@ -91,8 +86,6 @@ public class build_tagger {
 		trainingFileName = training;
 		developmentFileName = development;
 		modelFileName = model;
-		transitionMatrix = new float[NUM_OF_TAGS][NUM_OF_TAGS];
-		emissionMatrix = new HashMap<String, float[]>();
 		totalSingletonWords = 0;
 		countWordI = new HashMap<String, Integer>();
 		countSingletonTag = new int[NUM_OF_TAGS-1];
@@ -280,59 +273,6 @@ public class build_tagger {
 		
 		return TAG_INDEX.indexOf(tag_i);
 	}
-	/**
-	 * Based on the gathered information
-	 * Computing "tag transition probability, word emission probability" and smoothing: Witten-Bell Smoothing
-	 */
-	@SuppressWarnings("rawtypes")
-	private void compute_smooth(){
-		/**
-		 * transition matrix smoothing
-		 */
-		for(int i=0; i<countTagTag.length; i++){
-			/*C(Tag_i)*/
-			int _cI = sumTagTag[i];
-			int _tI = seenTagTypes[i];
-			int _zI = NUM_OF_TAGS - _tI;
-			for(int j=0; j<countTagTag[i].length; j++){
-				int _cIJ = countTagTag[i][j];
-				if(_cIJ != 0){
-					transitionMatrix[i][j] = (float) _cIJ / (float) (_cI + _tI);
-				}
-				else{
-					transitionMatrix[i][j] = (float) _tI / (float)(_zI * (_cI + _tI));
-				}
-			}
-		}
-		
-		/**
-		 * emission matrix smoothing
-		 */
-		Iterator _it = countWordTag.entrySet().iterator();
-	    while (_it.hasNext()) {
-	        Map.Entry _pairs = (Map.Entry)_it.next();
-	        int[] _tags = (int[]) _pairs.getValue();
-	        String _word = (String) _pairs.getKey();
-	        
-	        float[] _pWordTag = new float[NUM_OF_TAGS];
-	        for(int i=0; i<_tags.length; i++){
-	        	float _cI = (float) sumWordTag[i];
-	        	float _tI = (float) seenWordTypes[i];
-	        	float _zI = (float) (totalWordTypes) - _tI;
-	        	float _cWI = (float) _tags[i];
-	        	if(_cWI != 0.0){
-	        		_pWordTag[i] = _cWI / (_cI + _tI);
-	        	}
-	        	else{
-	        		_pWordTag[i] = _tI / (_zI * (_cI + _tI));
-	        	}
-	        }
-	        emissionMatrix.put(_word, _pWordTag);      
-	    }
-	    /* avoids a ConcurrentModificationException */
-        _it.remove();
-		return;
-	}
 	
 	/**
 	 * Write gathered statistic data into file
@@ -411,7 +351,6 @@ public class build_tagger {
 	public void build(){
 		read_training_file(trainingFileName);
 		read_development_file(developmentFileName);
-		compute_smooth();
 		write_model_file(modelFileName);
 		/*test
 		System.out.println("V = " + totalWordTypes);
