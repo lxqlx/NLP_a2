@@ -219,13 +219,10 @@ public class build_tagger {
 		
 		/*if word matched as numbers, convert it to #NUM#, for simplify*/
 		String _regex= "-?\\d+(\\.\\d+)?";
-		if(word_k.matches(_regex)){
-			//if(!tag_i.equals("CD"))
-			//System.out.println(word_k + " : " + tag_i);
+		String _regex2 = "-?\\d+(,\\d+)*";
+		if(word_k.matches(_regex) || word_k.matches(_regex2)){
 			word_k = "#NUM#";
-			//System.out.println("matched numeric");
 		}
-		
 		/*if word already exists, add one for tag_i*/
 		if(countWordTag.containsKey(word_k)){
 			/*Check if word types already counted for Tag_i*/

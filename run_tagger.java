@@ -143,7 +143,7 @@ public class run_tagger {
 			}
 			
 		} catch (IOException e) {
-			System.out.println("_line = _br.readLine() error");
+			System.out.println("IO error");
 			e.printStackTrace();
 		}
 	}
@@ -151,7 +151,7 @@ public class run_tagger {
 		
 		String[] _temp = line.split("\\s+");
 		if(_temp.length != array.length){
-			System.out.println(modelFileName+ " File is Broken!");
+			System.out.println(modelFileName+ " Wrong Format!");
 		}
 		else{
 			for(int j=0; j<array.length; j++){
@@ -305,12 +305,9 @@ public class run_tagger {
 			_backOffProb = (_cW + 1.0d) /(totalCountWordTag + totalWordTypes);
 		}
 		
-		/* Number of Singletons*/
-		double _lambda = (double) countSingletonTag[_i];
-		/* In case that no singletons*/
-		if(_lambda == 0.0d){
-			_lambda = 1E-100;
-		}
+		/* Number of Singletons, in case that _lambda is 0*/
+		double _lambda = (double) countSingletonTag[_i] + 1.0d;
+		
 		double _cT = sumWordTag[_i];
 		
 		/*One-Count Smoothing*/
@@ -322,10 +319,12 @@ public class run_tagger {
 	private double get_aij(int i, int j){
 		return get_wb_trans_prob(i, j);
 	}
+	
 	private double get_bwj(String w, int j){
 		/*If string match numeric pattern, convert it into #NUM# as stored.*/
 		String _regex= "-?\\d+(\\.\\d+)?";
-		if(w.matches(_regex)){
+		String _regex2 = "-?\\d+(,\\d+)*";
+		if(w.matches(_regex) || w.matches(_regex2)){
 			w = "#NUM#";
 		}
 		if(smoothingFlag == 0)
@@ -368,7 +367,7 @@ public class run_tagger {
 	 * @param words
 	 * @return
 	 */
-	private int[] vertibi(String[] words){
+	private int[] viterbi(String[] words){
 		double[][] _maxProb = new double[words.length+1][NUM_OF_TAGS];
 		int[][] _prevState = new int[words.length+1][NUM_OF_TAGS];
 		/*Initialization Step*/
@@ -432,7 +431,7 @@ public class run_tagger {
 			while((_line = _br.readLine()) != null){
 				_count ++;
 				String[] _words = _line.split("\\s+");
-				int[] _tags = vertibi(_words);
+				int[] _tags = viterbi(_words);
 				//System.out.println("words length: "+ _words[_words.length-1] + " tags length: " + _tags[_tags.length-1]);
 				_fw.write(_words[0]+"/"+ TAG_INDEX.get(_tags[0]));
 				for(int i=1; i<_words.length; i++){
@@ -447,7 +446,7 @@ public class run_tagger {
 			_fw.close();
 			_br.close();
 		} catch (IOException e) {
-			System.out.println("_line = _br.readLine() error");
+			System.out.println("IO error");
 			e.printStackTrace();
 		}
 	}
